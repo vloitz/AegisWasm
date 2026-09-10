@@ -25,5 +25,6 @@
         },
         "minimap.background": "#00000000",
         "scrollbar.shadow": "#00000000"
-    }
+    },
+    "cmake.sourceDirectory": "E:/MASTER/Proyectos/2026/Web/AegisWasm/core"
 }
