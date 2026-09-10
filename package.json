@@ -1,0 +1,7 @@
+{
+    "name": "aegiswasm",
+    "version": "1.0.0",
+    "description": "AegisWasm Enterprise Security Core",
+    "main": "compiler/aegis_init.js",
+    "type": "commonjs"
+}
