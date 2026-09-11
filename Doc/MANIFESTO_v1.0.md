@@ -169,7 +169,7 @@ bundler-agnóstico.**
 |---|---|---|---|
 | **v2.0** | Congelar + tag + release | ✅ Completado | Hoy |
 | **Research 3** | Diseño fino del CLI wrapper | 1-2 días | Próxima semana |
-| **v2.1 MVP** | CLI con soporte Vite-only | 2-3 semanas | ✅ Completado (Fase 3) |
+| **v2.1 MVP** | CLI con soporte Vite-only | 2-3 semanas | ✅ Completado (Fase 3 + 3.5) |
 | **v2.1 Universal** | CLI + Source Maps + edge runtimes | +1-2 semanas | Semanas 6-7 |
 | **v3.0 Diferido** | VFS + shims para pure-ESM | 6-10 semanas | Solo si demanda |
 
@@ -228,6 +228,32 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 > Cubrir el 95% con el 30% del esfuerzo es ingeniería senior;
 > perseguir el 5% restante con el 200% del esfuerzo es ego."*
 > — Filosofía de diseño AegisWasm v1.0
+
+---
+
+## 9. Hitos verificados en v2.1.0 MVP
+
+**Fecha:** 2026-09-11
+
+**Validado end-to-end sobre Vite 5.4.11 (template vanilla):**
+
+- [x] CLI `aegis wrap ./dist` procesa el output de Vite sin modificar el código fuente.
+- [x] Cifrado in-place con Magic Bytes `\0AEGv1\0` (7 bytes).
+- [x] Scanner HTML detecta `<script type="module" src>`.
+- [x] Bootloader extrae los tags y los reinjecta tras `serviceWorker.ready`.
+- [x] SW runtime descifra chunks al vuelo vía `crypto` (XOR temporal).
+- [x] Header `X-Aegis-Served: 1` confirma intercepción en Network.
+- [x] **Lazy loading de chunk cifrado funciona:** `import('./extra.js')` en runtime fue interceptado, descifrado (173 → 166 bytes) y ejecutado.
+- [x] UI renders idéntica al bundle sin cifrar.
+
+**Pendiente para v2.1 universal:**
+
+- [ ] Validar con Webpack, Rollup, esbuild, Parcel, Next, Nuxt, SvelteKit, Astro.
+- [ ] Validar con proyectos multi-chunk grandes (más de 50 chunks).
+- [ ] Validar con `<link rel="modulepreload">` (Vite no lo emite en todos los casos).
+- [ ] Source Maps cifrados + integración APM (Sentry, Datadog).
+- [ ] Edge runtimes (Cloudflare Workers, Vercel Edge, Deno Deploy).
+- [ ] Migración a AES-GCM (`\0AEGv2\0`) con `crypto.subtle`.
 ```
 
 ---
