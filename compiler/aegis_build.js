@@ -114,27 +114,28 @@ console.log(`\n${C_YELLOW}📂 Fase 3: Construyendo Manifiesto y conectando el A
 
 // A) Construir el Manifiesto ("La Lista VIP")
 const vaultBasenames = vaultAssets.map(p => path.basename(p));
+// 🎛️ El manifest es un ESPEJO FIEL del contrato del usuario.
+// AegisWasm NO conoce algoritmos, claves ni nombres de proyecto.
+// Todo lo relacionado con routing/cifrado viene de config.routing.
+// Si el usuario no declara routing, el manifest sale con array vacío
+// y el adapter no intercepta nada (comportamiento passthrough).
+const userRouting = Array.isArray(config.routing) ? config.routing : [];
+
+// Fase 3.1: Clasificamos los activos de la bóveda que son scripts ejecutables.
+// El adapter usará esta lista para interceptar <script src="/app.js"> del HTML
+// y devolver un loader que dispara el SDK en el main thread.
+// Los workers quedan fuera por ahora (Fase 3.2 los tratará con contrato propio).
+const localScripts = encryptAssets.map(p => ({
+    filename: path.basename(p),
+    type: 'script'
+}));
+
 const manifest = {
     aegis_version: "2.0",
     build_timestamp: new Date().toISOString(),
-    crypto: {
-        algorithm: "xor",
-        key: XOR_KEY
-    },
     vault_assets: vaultBasenames,
-    routing: [{
-            id: "r2-audio-segments",
-            match_hostname: "r2.dev",
-            match_path: "\\.m4s$",
-            transform: "/v-enc/"
-        },
-        {
-            id: "hf-audio-segments",
-            match_hostname: "workers.dev",
-            match_path: "\\.m4s$",
-            transform: "/v-enc/"
-        }
-    ]
+    local_scripts: localScripts,
+    routing: userRouting
 };
 
 const manifestPath = path.join(outDir, 'aegis.manifest.json');
@@ -148,55 +149,137 @@ const adapterCode = `
 // ============================================================================
 self.AegisAdapter = (function() {
     let manifest = null;
-    fetch('/aegis.manifest.json')
+    const localScriptBasenames = new Set();
+    // ⏳ Promesa única de carga: todos los handle() la esperan antes de decidir,
+    // eliminando la race condition del primer request (cuando el manifest aún no llegó).
+    const manifestReady = fetch('/aegis.manifest.json', { cache: 'no-store' })
         .then(res => res.json())
-        .then(data => manifest = data)
-        .catch(err => console.error('[🛡️ Aegis] Error cargando manifiesto:', err));
+        .then(data => {
+            manifest = data;
+            if (data.local_scripts) {
+                data.local_scripts.forEach(a => localScriptBasenames.add(a.filename));
+            }
+            return data;
+        })
+        .catch(err => { console.error('[🛡️ Aegis] Error cargando manifiesto:', err); return null; });
 
-    function decryptXOR(buffer, key) {
-        const data = new Uint8Array(buffer);
-        const limit = Math.min(100, data.length);
-        for (let i = 0; i < limit; i++) data[i] ^= key;
-        return data.buffer;
+    // ═══════════════════════════════════════════════════════════════════════
+    // REGISTRO DE ALGORITMOS DE DESCIFRADO
+    // El adapter consulta este registro por el campo algorithm de cada
+    // regla de routing. Para añadir un algoritmo nuevo (AES-GCM, ChaCha20,
+    // XOR-rotativo, etc.), solo se agrega una entrada aquí. El compilador
+    // NO necesita saber que existe.
+    // ═══════════════════════════════════════════════════════════════════════
+    const CRYPTO_ENGINES = {
+        'xor-multibyte': function(data, cfg) {
+            const keyBytes = new TextEncoder().encode(cfg.key_utf8);
+            const limit = Math.min(cfg.bytes_to_decrypt || data.length, data.length);
+            for (let i = 0; i < limit; i++) {
+                data[i] ^= keyBytes[i % keyBytes.length];
+            }
+            return data;
+        },
+        'xor-single': function(data, cfg) {
+            const limit = Math.min(cfg.bytes_to_decrypt || data.length, data.length);
+            const k = cfg.key_byte;
+            for (let i = 0; i < limit; i++) data[i] ^= k;
+            return data;
+        },
+        'identity': function(data) {
+            return data;
+        }
+    };
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Fase 3.1: Loader sintético para scripts locales en la bóveda.
+    // Cuando el HTML pide /app.js con una etiqueta <script src> tradicional,
+    // el SW devuelve este loader. El loader importa el SDK, espera a que esté
+    // listo, y dispara la inyección fantasma en el main thread.
+    // Usa una cola global en window para garantizar orden de carga estricto
+    // (crítico cuando un script depende de otro, ej. app.js → calibradores.js).
+    // ═══════════════════════════════════════════════════════════════════════
+    function buildLoaderResponse(asset) {
+        var queueKey = '__aegisInjectionQueue';
+        var loader = '(async () => {' +
+            'try {' +
+            'const mod = await import("/aegis-sdk.js");' +
+            'const Aegis = mod.Aegis || window.Aegis;' +
+            'if (!Aegis) { console.error("[Aegis] SDK no expone instancia Aegis."); return; }' +
+            'await Aegis.ready;' +
+            'window.' + queueKey + ' = window.' + queueKey + ' || Promise.resolve();' +
+            'window.' + queueKey + ' = window.' + queueKey + '.then(() => Aegis.injectScript("' + asset.filename + '"));' +
+            'await window.' + queueKey + ';' +
+            '} catch (e) { console.error("[Aegis] Loader fallo para ' + asset.filename + ':", e); console.error("[Aegis] Causa probable: /aegis-sdk.js no existe en la raíz. Verifica que aegis_build.js lo haya generado."); }' +
+            '})();';
+        return new Response(loader, {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/javascript; charset=utf-8',
+                'Cache-Control': 'no-store'
+            }
+        });
     }
 
     return {
-        handle: function(event) {
+                handle: function(event) {
             const url = new URL(event.request.url);
-            if (event.request.method !== 'GET' || !url.protocol.startsWith('http') || !url.pathname.endsWith('.m4s')) {
+            if (event.request.method !== 'GET' || !url.protocol.startsWith('http')) {
+                return false;
+            }
+
+            // Clasificación temprana para decidir si nos interesa la request.
+            const isRemoteAudio = url.pathname.endsWith('.m4s');
+            const isLocalScriptHint = url.origin === self.location.origin && url.pathname.endsWith('.js');
+            if (!isRemoteAudio && !isLocalScriptHint) {
                 return false;
             }
 
             event.respondWith((async () => {
-                if (!manifest) {
-                    try {
-                        const res = await fetch('/aegis.manifest.json');
-                        manifest = await res.json();
-                    } catch(e) { return fetch(event.request); }
+                await manifestReady;
+
+                // ── Caso A: Script local en la bóveda → Loader sintético ──
+                if (isLocalScriptHint && manifest) {
+                    const basename = url.pathname.split('/').pop();
+                    if (localScriptBasenames.has(basename)) {
+                        const asset = manifest.local_scripts.find(a => a.filename === basename);
+                        if (asset) return buildLoaderResponse(asset);
+                    }
+                    return fetch(event.request);
                 }
 
-                const rule = manifest.routing.find(r =>
-                    url.hostname.includes(r.match_hostname) && new RegExp(r.match_path).test(url.pathname)
-                );
-                if (!rule) return fetch(event.request);
+                // ── Caso B: Segmento de audio remoto → Descifrado al vuelo ──
+                if (isRemoteAudio && manifest && manifest.routing) {
+                    const rule = manifest.routing.find(r =>
+                        url.hostname.includes(r.match_hostname) && new RegExp(r.match_path).test(url.pathname)
+                    );
+                    if (!rule) return fetch(event.request);
+                    const pathParts = url.pathname.split('/');
+                    const fileName = pathParts.pop();
+                    const newPath = pathParts.join('/') + rule.transform + fileName + '.enc';
+                    const encUrl = url.origin + newPath;
+                    try {
+                        const encResponse = await fetch(encUrl);
+                        if (!encResponse.ok) return fetch(event.request);
+                        const buffer = await encResponse.arrayBuffer();
+                        const cryptoCfg = rule.crypto || { algorithm: 'identity' };
+                        const engine = CRYPTO_ENGINES[cryptoCfg.algorithm];
+                        if (!engine) {
+                            console.warn('[🛡️ Aegis] Algoritmo no registrado:', cryptoCfg.algorithm, '- passthrough forzado.');
+                            return fetch(event.request);
+                        }
+                        const decryptedData = engine(new Uint8Array(buffer), cryptoCfg);
+                        return new Response(decryptedData.buffer, {
+                            status: 200,
+                            headers: { 'Content-Type': 'video/iso.segment' }
+                        });
+                    } catch (err) { return fetch(event.request); }
+                }
 
-                const pathParts = url.pathname.split('/');
-                const fileName = pathParts.pop();
-                const newPath = pathParts.join('/') + rule.transform + fileName + '.enc';
-                const encUrl = url.origin + newPath;
-
-                try {
-                    const encResponse = await fetch(encUrl);
-                    if (!encResponse.ok) return fetch(event.request);
-
-                    const buffer = await encResponse.arrayBuffer();
-                    const decryptedBuffer = decryptXOR(buffer, manifest.crypto.key);
-                    return new Response(decryptedBuffer, {
-                        status: 200,
-                        headers: { 'Content-Type': 'video/iso.segment' }
-                    });
-                } catch (err) { return fetch(event.request); }
+                // Fallback neutro
+                return fetch(event.request);
             })());
+
             return true;
         }
     };
@@ -205,6 +288,82 @@ self.AegisAdapter = (function() {
 const adapterPath = path.join(outDir, 'aegis-sw-adapter.js');
 fs.writeFileSync(adapterPath, adapterCode.trim(), 'utf-8');
 console.log(`   💂 Guardaespaldas auto-generado: aegis-sw-adapter.js`);
+
+// B.2) AUTO-INSTALACIÓN DEL SDK CLIENTE (aegis-sdk.js)
+// El SDK vive en el main thread, carga el Wasm y expone la API pública
+// para inyectar scripts y crear workers desde la bóveda.
+const sdkCode = `
+import loadAegisEngine from './bin/aegis_engine.js';
+
+class AegisShield {
+    constructor() {
+        this.engine = null;
+        this.ready = this.init();
+    }
+
+    async init() {
+        console.log("[🛡️ AegisWasm] Inicializando bóveda asíncrona...");
+        this.engine = await loadAegisEngine();
+        console.log("[🛡️ AegisWasm] Motor en línea. Listo para servir activos.");
+    }
+
+    async _getRawAsset(filename) {
+        await this.ready;
+        const scriptPtr = this.engine.ccall('get_secure_asset', 'number', ['string'], [filename]);
+        if (!scriptPtr) {
+            console.error('[🛡️ AegisWasm] Asset no encontrado en bóveda: ' + filename);
+            return null;
+        }
+        const rawCode = this.engine.UTF8ToString(scriptPtr);
+        this.engine.ccall('free_secure_asset', null, ['number'], [scriptPtr]);
+        return rawCode;
+    }
+
+    async injectScript(filename, isModule = false) {
+        const code = await this._getRawAsset(filename);
+        if (!code) return;
+
+        const script = document.createElement('script');
+        if (isModule) script.type = 'module';
+
+        let wrappedCode = code;
+        if (document.readyState !== 'loading') {
+            // SHIM: si el DOM ya cargó, disparamos DOMContentLoaded inmediatamente
+            // para que el callback registrado por el script del usuario se ejecute.
+            wrappedCode = '(function(){' +
+                'var _origAdd = document.addEventListener;' +
+                'document.addEventListener = function(type, listener, opts){' +
+                    'if (type === "DOMContentLoaded" && document.readyState !== "loading") {' +
+                        'try { listener.call(document, new Event("DOMContentLoaded")); } catch(e) { console.error(e); }' +
+                    '} else {' +
+                        'return _origAdd.call(document, type, listener, opts);' +
+                    '}' +
+                '};' +
+                'setTimeout(function(){ document.addEventListener = _origAdd; }, 0);' +
+            '})();' + '\\n' + code;
+        }
+
+        script.textContent = wrappedCode;
+        document.head.appendChild(script);
+        console.log('[🛡️ AegisWasm] Inyección fantasma completada: ' + filename);
+    }
+
+    async createSecureWorker(filename) {
+        const code = await this._getRawAsset(filename);
+        if (!code) return null;
+        const blob = new Blob([code], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        console.log('[🛡️ AegisWasm] Hilo Worker seguro creado: ' + filename);
+        return new Worker(workerUrl, { type: 'module' });
+    }
+}
+
+export const Aegis = new AegisShield();
+window.Aegis = Aegis;
+`;
+const sdkPath = path.join(outDir, 'aegis-sdk.js');
+fs.writeFileSync(sdkPath, sdkCode.trim(), 'utf-8');
+console.log(`   🔧 SDK cliente auto-generado: aegis-sdk.js`);
 
 // C) Trasladar archivos de la Zona Roja e Inyectar el Adapter
 excludeAssets.forEach(filePath => {
@@ -233,6 +392,21 @@ excludeAssets.forEach(filePath => {
                 });
                 console.log(`   🛡️ Inyección limpia: El Guardaespaldas vigila la puerta en ${filename}`);
             }
+
+            // 3. Blindar cache.addAll contra 404s de archivos movidos a la bóveda
+            //    Transforma: return cache.addAll(ASSETS_TO_CACHE);
+            //    En:         return Promise.all(ASSETS_TO_CACHE.map(a => cache.add(a).catch(...)));
+            //    Universal: no asume nombres de archivos, funciona en cualquier proyecto.
+            const addAllRegex = /return\s+cache\.addAll\s*\(\s*ASSETS_TO_CACHE\s*\)\s*;/;
+            if (addAllRegex.test(content)) {
+                content = content.replace(
+                    addAllRegex,
+                    `return Promise.all(ASSETS_TO_CACHE.map(a => cache.add(a).catch(function(err) { console.warn('[AegisWasm] Activo omitido del precache (404, no critico):', a); })));`
+                );
+                console.log(`   🧹 cache.addAll blindado contra 404s en ${filename}`);
+            } else if (content.includes('cache.addAll')) {
+                console.log(`   ⚠️ Se detectó 'cache.addAll' pero con un patrón no reconocido. Revisar manualmente.`);
+            }
         }
 
         fs.writeFileSync(dest, content, 'utf-8');
@@ -240,6 +414,15 @@ excludeAssets.forEach(filePath => {
         console.log(`   📄 Desplegado limpio en ${displayOutDir}: ${filename}`);
     }
 });
+
+// Verificación de artefactos: confirmar que los 3 archivos críticos existen en outDir
+const requiredArtifacts = ['aegis.manifest.json', 'aegis-sw-adapter.js', 'aegis-sdk.js'];
+const missingArtifacts = requiredArtifacts.filter(f => !fs.existsSync(path.join(outDir, f)));
+if (missingArtifacts.length > 0) {
+    console.error(`${C_RED}❌ Faltan artefactos críticos en ${outDir}: ${missingArtifacts.join(', ')}${C_RESET}`);
+    process.exit(1);
+}
+console.log(`   ✅ Verificación: los 3 artefactos están presentes en ${config.options.out_dir || './'}`);
 
 console.log(`\n${C_GREEN}🚀 Fase 2 completada: Manifiesto, Adapter y Bóveda C++ preparados.${C_RESET}`);
 console.log(`${C_YELLOW}⚙️ Compilando motor WebAssembly automáticamente...${C_RESET}`);

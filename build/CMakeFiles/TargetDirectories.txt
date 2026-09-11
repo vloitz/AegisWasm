@@ -1,0 +1,2 @@
+E:/MASTER/Proyectos/2026/Web/AegisWasm/build/CMakeFiles/ALL_BUILD.dir
+E:/MASTER/Proyectos/2026/Web/AegisWasm/build/CMakeFiles/ZERO_CHECK.dir

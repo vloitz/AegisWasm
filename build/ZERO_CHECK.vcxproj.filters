@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\MASTER\Proyectos\2026\Web\AegisWasm\build\CMakeFiles\72fc9f2f548bed446088bb2cf6131592\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{AA8F74AC-A5D5-356E-B66E-41207B9EC5C8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
