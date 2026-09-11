@@ -167,11 +167,12 @@ bundler-agnóstico.**
 
 | Fase | Alcance | Duración | Estado |
 |---|---|---|---|
-| **v2.0** | Congelar + tag + release | ✅ Completado | Hoy |
-| **Research 3** | Diseño fino del CLI wrapper | 1-2 días | Próxima semana |
-| **v2.1 MVP** | CLI con soporte Vite-only | 2-3 semanas | ✅ Completado (Fase 3 + 3.5) |
-| **v2.1 Universal** | CLI + Source Maps + edge runtimes | +1-2 semanas | Semanas 6-7 |
-| **v3.0 Diferido** | VFS + shims para pure-ESM | 6-10 semanas | Solo si demanda |
+| **v2.0** | Congelar + tag + release | ✅ Completado | 2026-09-10 |
+| **Research 3** | Diseño fino del CLI wrapper | ✅ Completado | 2026-09-11 |
+| **v2.1 MVP** | CLI con soporte Vite + Rollup + Webpack | ✅ Completado | 2026-09-11 |
+| **v2.1 Universal** | CLI + esbuild + Parcel + Next + Nuxt | ⏳ Pendiente | Próximo milestone |
+| **v2.2 Source Maps** | Cifrado de .map + integración APM | ⏳ Pendiente | Después de universal |
+| **v3.0 Diferido** | VFS + shims para pure-ESM | ⏳ Diferido | Solo si demanda real |
 
 ### Preguntas pendientes (Research 3)
 
@@ -246,11 +247,30 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 - [x] **Lazy loading de chunk cifrado funciona:** `import('./extra.js')` en runtime fue interceptado, descifrado (173 → 166 bytes) y ejecutado.
 - [x] UI renders idéntica al bundle sin cifrar.
 
+### Bundlers validados (actualizado 2026-09-11)
+
+| Bundler | Formato HTML que emite | Estado |
+|---|---|---|
+| Vite 5.4.11 | `<script type="module" src="...">` | ✅ Validado |
+| Rollup 4.24 | `<script type="module" src="...">` | ✅ Validado |
+| Webpack 5.110 | `<script defer src=...>` minificado | ✅ Validado (caso crítico) |
+| esbuild | Variantes de `type="module"` | ⏳ Pendiente |
+| Parcel 2 | `<script type="module" src="...hash...">` | ⏳ Pendiente |
+| Next.js | `<link preload as=script>` + `<script async>` | ⏳ Pendiente |
+| Nuxt 3 | `<link modulepreload>` + `<script type="module">` | ⏳ Pendiente |
+
+**Fixes aplicados durante validación de Webpack:**
+
+- `html-scanner.js`: regex acepta atributos sin comillas (HTML minificado).
+- `wrap.js`: el bootloader se decide por el injector, no por el scanner.
+- `config.js`: `aegis-sw-runtime.js` añadido al array de exclusión.
+
 **Pendiente para v2.1 universal:**
 
-- [ ] Validar con Webpack, Rollup, esbuild, Parcel, Next, Nuxt, SvelteKit, Astro.
+- [ ] Validar con esbuild, Parcel, Next.js, Nuxt 3, SvelteKit, Astro.
 - [ ] Validar con proyectos multi-chunk grandes (más de 50 chunks).
-- [ ] Validar con `<link rel="modulepreload">` (Vite no lo emite en todos los casos).
+- [ ] Preservación semántica de `defer`/`async` en scripts reinyectados
+      (los scripts dinámicos son siempre `async` por HTML spec).
 - [ ] Source Maps cifrados + integración APM (Sentry, Datadog).
 - [ ] Edge runtimes (Cloudflare Workers, Vercel Edge, Deno Deploy).
 - [ ] Migración a AES-GCM (`\0AEGv2\0`) con `crypto.subtle`.
