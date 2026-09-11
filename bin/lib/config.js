@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
         'sw.js',
         'aegis-sw-adapter.js',
         'aegis-sdk.js',
+        'aegis-sw-runtime.js',
         'aegis.manifest.json',
         'bin/**',
         '**/*.map'

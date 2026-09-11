@@ -136,8 +136,12 @@ async function run(args) {
     console.log(`   Procesados: ${processed}, saltados: ${skipped}\n`);
 
     // ─── 4. Bootloader del HTML (solo en modo v2) ───
+    // FIX Ruta B: El criterio de "hay tags elegibles" lo decide el INJECTOR,
+    // no el scanner. El scanner solo cuenta "module scripts" y se pierde
+    // los <script defer src=...> de Webpack. El injector mira encryptedBasenames
+    // y captura cualquier script cuyo src apunte a un archivo cifrado.
     let bootStats = null;
-    if (!opts.legacy && htmlReport && htmlReport.totalTags > 0) {
+    if (!opts.legacy && fs.existsSync(htmlFile)) {
         console.log(`${colors.yellow('🚀 Aplicando Bootloader al HTML...')}`);
 
         const originalHtml = fs.readFileSync(htmlFile, 'utf-8');
@@ -147,9 +151,7 @@ async function run(args) {
         if (bootStats.alreadyWrapped) {
             console.log(`   ${colors.gray('·')} HTML ya estaba envuelto (idempotencia). Skip.`);
         } else if (bootStats.tagsExtracted === 0) {
-            console.log(`   ${colors.yellow('⚠')} Scanner detectó ${htmlReport.totalTags} tags pero el injector extrajo 0.`);
-            console.log(`   ${colors.gray('·')} Causa probable: tags no apuntan a archivos cifrados, o el regex falló.`);
-            console.log(`   ${colors.gray('·')} Bootloader NO aplicado.`); // Explícito
+            console.log(`   ${colors.gray('·')} Sin tags que apunten a archivos cifrados. Bootloader NO aplicado.`);
         } else {
             if (!opts.dryRun) fs.writeFileSync(htmlFile, result.html, 'utf-8');
             console.log(`   ${colors.green('✓')} ${bootStats.tagsExtracted} tags extraídos e inyectados al bootloader.`);
@@ -157,8 +159,6 @@ async function run(args) {
         console.log('');
     } else if (opts.legacy) {
         console.log(`${colors.gray('·')} Modo legacy: HTML sin modificar.\n`);
-    } else if (htmlReport && htmlReport.totalTags === 0) {
-        console.log(`${colors.gray('·')} Sin tags elegibles en index.html (proyecto sin módulos ESM).\n`);
     }
 
     // ─── 5. Generar SW Runtime con Magic Bytes ───
