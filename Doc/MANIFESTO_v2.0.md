@@ -177,6 +177,8 @@ La Capa 1 Universal está cerrada. Los próximos esfuerzos se centran en observa
 | **v2.1.2** | 2026-09-11 | Fixes estructurales HTML: Parcel 2 (importmaps/no-head). |
 | **v2.1.3** | 2026-09-12 | Universalidad Completa: Next.js 16 (Turbopack) y Nuxt 3.14. |
 
+**Estado del desarrollo:** congelado intencionalmente en v2.1.3. Ver `Doc/STATUS.md` para el detalle del freeze y las condiciones de reapertura.
+
 ---
 
 > *"La universalidad efectiva es más valiosa que la universalidad teórica. Cubrir el 95% con el 30% del esfuerzo es ingeniería senior; perseguir el 5% restante con el 200% del esfuerzo es ego."*
