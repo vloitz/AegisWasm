@@ -254,7 +254,7 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 | Vite 5.4.11 | `<script type="module" src="...">` | ✅ Validado |
 | Rollup 4.24 | `<script type="module" src="...">` | ✅ Validado |
 | Webpack 5.110 | `<script defer src=...>` minificado | ✅ Validado (caso crítico) |
-| esbuild | Variantes de `type="module"` | ⏳ Pendiente |
+| esbuild 0.2x | `<script type="module" src="...">` | ✅ Validado |
 | Parcel 2 | `<script type="module" src="...hash...">` | ⏳ Pendiente |
 | Next.js | `<link preload as=script>` + `<script async>` | ⏳ Pendiente |
 | Nuxt 3 | `<link modulepreload>` + `<script type="module">` | ⏳ Pendiente |
