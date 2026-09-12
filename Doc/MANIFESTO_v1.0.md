@@ -170,7 +170,8 @@ bundler-agnóstico.**
 | **v2.0** | Congelar + tag + release | ✅ Completado | 2026-09-10 |
 | **Research 3** | Diseño fino del CLI wrapper | ✅ Completado | 2026-09-11 |
 | **v2.1 MVP** | CLI con soporte Vite + Rollup + Webpack | ✅ Completado | 2026-09-11 |
-| **v2.1 Universal** | CLI + esbuild + Parcel + Next + Nuxt | ⏳ Pendiente | Próximo milestone |
+| **v2.1 MVP+** | CLI + esbuild + Parcel | ✅ Completado | 2026-09-11 |
+| **v2.1 Universal** | CLI + Next.js + Nuxt 3 | ⏳ Pendiente | Próximo milestone |
 | **v2.2 Source Maps** | Cifrado de .map + integración APM | ⏳ Pendiente | Después de universal |
 | **v3.0 Diferido** | VFS + shims para pure-ESM | ⏳ Diferido | Solo si demanda real |
 
@@ -255,7 +256,7 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 | Rollup 4.24 | `<script type="module" src="...">` | ✅ Validado |
 | Webpack 5.110 | `<script defer src=...>` minificado | ✅ Validado (caso crítico) |
 | esbuild 0.2x | `<script type="module" src="...">` | ✅ Validado |
-| Parcel 2 | `<script type="module" src="...hash...">` | ⏳ Pendiente |
+| Parcel 2.13 | `<script type=importmap>` + `<script type=module src=...>` sin `<head>` | ✅ Validado (caso crítico) |
 | Next.js | `<link preload as=script>` + `<script async>` | ⏳ Pendiente |
 | Nuxt 3 | `<link modulepreload>` + `<script type="module">` | ⏳ Pendiente |
 
@@ -265,9 +266,29 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 - `wrap.js`: el bootloader se decide por el injector, no por el scanner.
 - `config.js`: `aegis-sw-runtime.js` añadido al array de exclusión.
 
+**Fixes aplicados durante validación de Parcel 2:**
+
+- `html-injector.js`: nuevo branch que inyecta el bootloader justo después
+  de `<!DOCTYPE>` cuando el HTML no tiene `<head>`. Parcel 2 emite HTML
+  minificado sin `<head>`, y sin este fix el bootloader se colocaba antes
+  del doctype, enviando al navegador a *quirks mode*.
+- `html-scanner.js`: sin cambios — ya soportaba `type=importmap` y
+  atributos sin comillas desde la fase anterior.
+
+**Por qué Parcel 2 es el caso crítico más distintivo:**
+
+A diferencia de Vite/Rollup/esbuild (que inyectan `<script type="module"
+src="...">` con URL directa al chunk), Parcel 2 emite un **importmap nativo**
+que mapea bare specifiers a URLs:
+
+```html
+<script type=importmap>{"imports":{"bbXhI":"/lazy.478b6a85.js"}}</script>
+<script type=module src=/ParcelTest.0184ed37.js></script>
+
 **Pendiente para v2.1 universal:**
 
-- [ ] Validar con esbuild, Parcel, Next.js, Nuxt 3, SvelteKit, Astro.
+- [x] Validar con Vite, Rollup, Webpack, esbuild, Parcel.
+- [ ] Validar con Next.js, Nuxt 3, SvelteKit, Astro.
 - [ ] Validar con proyectos multi-chunk grandes (más de 50 chunks).
 - [ ] Preservación semántica de `defer`/`async` en scripts reinyectados
       (los scripts dinámicos son siempre `async` por HTML spec).
