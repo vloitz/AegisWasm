@@ -258,7 +258,7 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 | esbuild 0.2x | `<script type="module" src="...">` | ✅ Validado |
 | Parcel 2.13 | `<script type=importmap>` + `<script type=module src=...>` sin `<head>` | ✅ Validado (caso crítico) |
 | Next.js 16 (Turbopack) | HTML hidratado, 8 tags, 7 chunks | ✅ Validado (caso crítico) |
-| Nuxt 3 | `<link modulepreload>` + `<script type="module">` | ⏳ Pendiente |
+| Nuxt 3.14 | `<script type=importmap>` + `<link modulepreload>` + `<script type=module>` | ✅ Validado |
 
 **Fixes aplicados durante validación de Webpack:**
 
