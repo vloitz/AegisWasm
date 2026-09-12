@@ -257,7 +257,7 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 | Webpack 5.110 | `<script defer src=...>` minificado | ✅ Validado (caso crítico) |
 | esbuild 0.2x | `<script type="module" src="...">` | ✅ Validado |
 | Parcel 2.13 | `<script type=importmap>` + `<script type=module src=...>` sin `<head>` | ✅ Validado (caso crítico) |
-| Next.js | `<link preload as=script>` + `<script async>` | ⏳ Pendiente |
+| Next.js 16 (Turbopack) | HTML hidratado, 8 tags, 7 chunks | ✅ Validado (caso crítico) |
 | Nuxt 3 | `<link modulepreload>` + `<script type="module">` | ⏳ Pendiente |
 
 **Fixes aplicados durante validación de Webpack:**
@@ -266,7 +266,31 @@ Vite-only. Sin código antes del research. Sin promesas antes de validación.
 - `wrap.js`: el bootloader se decide por el injector, no por el scanner.
 - `config.js`: `aegis-sw-runtime.js` añadido al array de exclusión.
 
-**Fixes aplicados durante validación de Parcel 2:**
+**Notas sobre la validación de Next.js 16 (Turbopack):**
+
+Next.js fue el caso más complejo de la lista por el HTML hidratado con React
+Streaming. Sin embargo, el código aguantó sin modificaciones:
+
+- 8 tags detectados y reinjectados correctamente por el bootloader.
+- 7 chunks cifrados y descifrados al vuelo (todos con delta -7 bytes, el
+  Magic Header).
+- El chunk lazy (`3jd4d6q0footr.js`) se descifró y ejecutó al click del botón.
+- El header `X-Aegis-Served: 1` se propagó correctamente en todas las
+  respuestas.
+
+**Descubrimiento secundario:** Next.js 16 usa Turbopack por defecto en el
+build de producción, incluso con el flag `--no-turbopack` en `create-next-app`
+(ese flag solo afecta a `dev` mode). Turbopack emite archivos con nombre
+`turbopack-XXXX.js` y esos archivos **también son interceptados y descifrados
+correctamente** por el SW runtime. No se requieren fixes adicionales para
+soportar Turbopack.
+
+**Nota para el roadmap (Capa 2 diferida):** El éxito con Next.js sugiere que
+el patrón de AegisWasm (Bootloader + Magic Bytes + SW runtime) es
+arquitectónicamente sólido frente a frameworks full-stack con hidratación
+compleja. Esto reduce el riesgo si en el futuro se decide construir la
+Capa 2 (VFS + shims).
+
 
 - `html-injector.js`: nuevo branch que inyecta el bootloader justo después
   de `<!DOCTYPE>` cuando el HTML no tiene `<head>`. Parcel 2 emite HTML
@@ -287,8 +311,8 @@ que mapea bare specifiers a URLs:
 
 **Pendiente para v2.1 universal:**
 
-- [x] Validar con Vite, Rollup, Webpack, esbuild, Parcel.
-- [ ] Validar con Next.js, Nuxt 3, SvelteKit, Astro.
+- [x] Validar con Vite, Rollup, Webpack, esbuild, Parcel, Next.js.
+- [ ] Validar con Nuxt 3, SvelteKit, Astro.
 - [ ] Validar con proyectos multi-chunk grandes (más de 50 chunks).
 - [ ] Preservación semántica de `defer`/`async` en scripts reinyectados
       (los scripts dinámicos son siempre `async` por HTML spec).
