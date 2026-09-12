@@ -1,10 +1,3 @@
-¡Entendido! DeepSeek se enredó con los bloques, así que vamos a dejar este documento impecable, estructurado y consolidado como el verdadero **Manifiesto 2.0**.
-
-Acá tienes el Markdown puro, gigante y directo, con toda la arquitectura de la Capa 1, los 7 bundlers integrados, el orden corregido y listo para que reemplaces el contenido de `MANIFESTO_v1.0.md` (que de paso te sugiero renombrar a `MANIFESTO_v2.0.md` o similar en tu repo).
-
-Copia y pega este bloque:
-
-```markdown
 # Manifiesto AegisWasm — Versión 2.0 (Universal)
 
 > **Fecha de release:** 2026-09-12
@@ -188,9 +181,3 @@ La Capa 1 Universal está cerrada. Los próximos esfuerzos se centran en observa
 
 > *"La universalidad efectiva es más valiosa que la universalidad teórica. Cubrir el 95% con el 30% del esfuerzo es ingeniería senior; perseguir el 5% restante con el 200% del esfuerzo es ego."*
 > — Filosofía de diseño AegisWasm v2.0
-
-```
-
-¡Con esto ya tienes el documento con la historia unificada, los fixes integrados y marcando claramente la era de la versión 2.0! Puedes guardarlo y ejecutar tus comandos de Git de la terminal con total tranquilidad. ¡Felicidades por cerrar la Capa 1 Universal! Avisame cuando el push esté arriba.
-
-```
