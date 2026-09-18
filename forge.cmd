@@ -39,9 +39,11 @@ if not "%~1"=="" (
     if /i "%~1"=="audit"  ( call "%CMD_DIR%\auditar.cmd"   & exit /b 0 )
     if /i "%~1"=="open"   ( call "%CMD_DIR%\abrir.cmd"     & exit /b 0 )
     if /i "%~1"=="serve"  ( call "%CMD_DIR%\serve.cmd"     & exit /b 0 )
-    if /i "%~1"=="help"   goto :help
-    if /i "%~1"=="-h"     goto :help
-    if /i "%~1"=="--help" goto :help
+    if /i "%~1"=="help"    goto :help
+    if /i "%~1"=="-h"      goto :help
+    if /i "%~1"=="--help"  goto :help
+    if /i "%~1"=="version" goto :version
+    if /i "%~1"=="--version" goto :version
     echo   !C_RE![X]!C_RS! Comando desconocido: %~1
     echo   !C_GY!Usa: forge help!C_RS!
     exit /b 1
@@ -92,6 +94,13 @@ if /i "!OPT!"=="q" goto :end
 goto :menu
 
 REM ============================================================
+REM   VERSION
+REM ============================================================
+:version
+powershell -NoProfile -Command "$c = Get-Content -LiteralPath '%~dp0.forge\config.cmd' -Raw -ErrorAction SilentlyContinue; if ($c -match 'FG_VERSION=([\d\.]+)') { Write-Host $Matches[1] } else { Write-Host 'unknown' }"
+goto :end
+
+REM ============================================================
 REM   HELP
 REM ============================================================
 :help
@@ -111,6 +120,7 @@ echo     !C_WH!forge log!C_RS!          Historial
 echo     !C_WH!forge audit!C_RS!        Auditar cambios
 echo     !C_WH!forge open!C_RS!         Abrir en VS Code
 echo     !C_WH!forge serve!C_RS!        Servidor de desarrollo
+echo     !C_WH!forge version!C_RS!      Muestra la version
 echo     !C_WH!forge help!C_RS!         Esta ayuda
 echo.
 goto :end

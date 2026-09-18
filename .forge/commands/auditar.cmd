@@ -4,11 +4,11 @@ chcp 65001 >nul 2>nul
 
 cd /d "%~dp0..\.."
 
-REM --- Detectar soporte ANSI (Windows 10+ / Windows Terminal) ---
+REM - Detectar soporte ANSI (Windows 10+ / Windows Terminal) -
 set "ANSI=1"
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
 
-REM --- Fallback si no hay soporte ANSI ---
+REM - Fallback si no hay soporte ANSI -
 if "!ESC!"=="" set "ANSI=0"
 
 if "!ANSI!"=="1" (
@@ -33,8 +33,8 @@ if "!ANSI!"=="1" (
     set "C_RESET="
 )
 
-REM --- Help flag ---
-if /i "%~1"=="--help" goto :help
+REM - Help flag -
+if /i "%~1"=="-help" goto :help
 if /i "%~1"=="-h"     goto :help
 if /i "%~1"=="help"   goto :help
 
@@ -43,7 +43,7 @@ if not exist ".git" (
     exit /b 1
 )
 
-REM --- Banner ---
+REM - Banner -
 echo.
 echo   !C_CYAN!============================================!C_RESET!
 echo   !C_BCYAN! AUDITAR!C_RESET! !C_GRAY!- Reportes de cambios!C_RESET!
@@ -53,23 +53,23 @@ echo   !C_GRAY!Genera un .txt con los cambios entre dos puntos del!C_RESET!
 echo   !C_GRAY!historial. Ideal para auditar con IA o revisar un rango.!C_RESET!
 echo.
 
-REM --- 1. Estado actual ---
+REM - 1. Estado actual -
 for /f "tokens=*" %%b in ('git branch --show-current 2^>nul') do set "BRANCH=%%b"
 
-echo   !C_CYAN!â—!C_RESET! !C_GRAY!Branch:!C_RESET!   !C_WHITE!!BRANCH!!C_RESET!
+echo   !C_CYAN!-!C_RESET! !C_GRAY!Branch:!C_RESET!   !C_WHITE!!BRANCH!!C_RESET!
 
 git add -A >nul 2>nul
 git diff --cached --quiet
 if errorlevel 1 (
     set "NCH=0"
     for /f %%c in ('git diff --cached --name-only ^| find /c /v ""') do set "NCH=%%c"
-    echo   !C_CYAN!â—!C_RESET! !C_GRAY!Cambios:!C_RESET!  !C_YELLOW!!NCH! archivos sin commitear!C_RESET!
+    echo   !C_CYAN!-!C_RESET! !C_GRAY!Cambios:!C_RESET!  !C_YELLOW!!NCH! archivos sin commitear!C_RESET!
 ) else (
-    echo   !C_CYAN!â—!C_RESET! !C_GRAY!Cambios:!C_RESET!  !C_GREEN!limpio!C_RESET!
+    echo   !C_CYAN!-!C_RESET! !C_GRAY!Cambios:!C_RESET!  !C_GREEN!limpio!C_RESET!
 )
 echo.
 
-REM --- 2. Cuantos commits listar ---
+REM - 2. Cuantos commits listar -
 set "LIMIT=10"
 set "INPUT="
 set /p "INPUT=  !C_BCYAN!Cuantos commits listar?!C_RESET! !C_GRAY![10 por defecto, T=todos]!C_RESET!: "
@@ -79,11 +79,11 @@ if /i "!INPUT!"=="T" (
     set "LIMIT=!INPUT!"
 )
 
-REM --- 3. Log a temp ---
+REM - 3. Log a temp -
 set "TMPLOG=%TEMP%\forge_git_log.txt"
 git log -n !LIMIT! --date=format:"%%Y-%%m-%%d %%H:%%M:%%S" --pretty=format:"%%h %%ad %%s" > "!TMPLOG!" 2>nul
 
-REM --- 4. Tabla con separadores ---
+REM - 4. Tabla con separadores -
 echo.
 echo   !C_CYAN!-------------------------------------------------------------!C_RESET!
 echo   !C_BCYAN! HISTORIAL!C_RESET!
@@ -117,7 +117,7 @@ echo   !C_CYAN!-------------------------------------------------------------!C_R
 echo   !C_GRAY!Total: !IDX! commits  ^(0 = mas reciente^)!C_RESET!
 echo.
 
-REM --- 5. Modos de uso (ordenados por frecuencia) ---
+REM - 5. Modos de uso (ordenados por frecuencia) -
 echo   !C_CYAN!-------------------------------------------------------------!C_RESET!
 echo   !C_BCYAN! MODOS DE USO!C_RESET!
 echo   !C_CYAN!-------------------------------------------------------------!C_RESET!
@@ -128,7 +128,7 @@ echo   !C_YELLOW![Enter]!C_RESET!  !C_GRAY!Solo ver historial (sin reporte)!C_RE
 echo   !C_CYAN!-------------------------------------------------------------!C_RESET!
 echo.
 
-REM --- 6. Pedir rango ---
+REM - 6. Pedir rango -
 set "RANGE="
 set /p "RANGE=  !C_BCYAN!Rango a auditar:!C_RESET! !C_GRAY![Enter=0,W]!C_RESET!: "
 if "!RANGE!"=="" (
@@ -199,7 +199,7 @@ if "!IS_WORK!"=="1" (
 )
 
 echo.
-echo   !C_CYAN!â—!C_RESET! !C_GRAY!Comparando:!C_RESET!
+echo   !C_CYAN!-------------------------------------------------------------!C_RESET! !C_GRAY!Comparando:!C_RESET!
 echo       !C_GRAY![antiguo]!C_RESET!   !C_YELLOW!!H_OLD!!C_RESET!  !C_GRAY!^(idx !OLD_IDX!^)!C_RESET!
 if "!IS_WORK!"=="1" (
     echo       !C_GRAY![reciente]!C_RESET!  !C_GREEN!working tree!C_RESET!
@@ -208,7 +208,7 @@ if "!IS_WORK!"=="1" (
 )
 echo.
 
-REM --- 7. Crear audits/ ---
+REM - 7. Crear audits/ -
 if not exist "audits" mkdir "audits"
 
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HHmmss"') do set "TS=%%i"
@@ -219,7 +219,7 @@ if "!IS_WORK!"=="1" (
     set "REPORT=audits\audit_!TS!_!OLD_IDX!-!NEW_IDX!.txt"
 )
 
-REM --- 8. Escribir reporte (SIN colores) ---
+REM - 8. Escribir reporte (SIN colores) -
 (
     echo # Reporte de auditoria
     echo.
@@ -259,10 +259,10 @@ REM --- 8. Escribir reporte (SIN colores) ---
     echo # ESTADO ACTUAL (sin commitear)
     echo # ============================================================
     echo.
-    git status --short
+    git status -short
 ) > "!REPORT!" 2>&1
 
-REM --- 9. Resumen ---
+REM - 9. Resumen -
 echo   !C_GREEN![OK]!C_RESET! Reporte generado
 echo.
 for %%f in ("!REPORT!") do set "SIZE=%%~zf"
@@ -273,7 +273,7 @@ echo       !C_GRAY!Tamano:!C_RESET!   !C_WHITE!!SIZE! bytes!C_RESET!
 echo       !C_GRAY!Lineas:!C_RESET!   !C_WHITE!!LINES!!C_RESET!
 echo.
 
-REM --- 10. Abrir ---
+REM - 10. Abrir -
 where code >nul 2>nul
 if not errorlevel 1 (
     set "OPEN="
@@ -300,7 +300,7 @@ echo   !C_CYAN!============================================!C_RESET!
 echo.
 echo   !C_BCYAN!USO:!C_RESET!
 echo     !C_WHITE!auditar.cmd!C_RESET!           Modo interactivo
-echo     !C_WHITE!auditar.cmd --help!C_RESET!    Esta ayuda
+echo     !C_WHITE!auditar.cmd -help!C_RESET!    Esta ayuda
 echo.
 echo   !C_BCYAN!QUE HACE:!C_RESET!
 echo     !C_GRAY!Genera un reporte .txt en audits/ con los cambios!C_RESET!

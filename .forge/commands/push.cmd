@@ -18,7 +18,7 @@ if "!ESC!"=="" (
 
 echo.
 echo   !C_CY!============================================!C_RS!
-echo   !C_BC! PUSH!C_RS! !C_GY!- Push a GitHub!C_RS!
+echo   !C_BC! SUBIR!C_RS! !C_GY!- Push a GitHub!C_RS!
 echo   !C_CY!============================================!C_RS!
 echo.
 
@@ -46,7 +46,7 @@ if /i "!SAVE!"=="n" goto :check_remote
 echo.
 set "SKIP_HISTORIAL=1"
 set "NO_PAUSE=1"
-call "guardar.cmd"
+call "%~dp0save.cmd"
 set "SKIP_HISTORIAL="
 set "NO_PAUSE="
 echo.

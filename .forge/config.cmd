@@ -4,7 +4,7 @@ REM   Configuration - edit these values to customize
 REM   Called from init.cmd via: call config.cmd
 REM ============================================================
 
-set "FG_VERSION=1.5.8"
+set "FG_VERSION=1.5.11"
 set "TAG_INITIAL=v1.0.0"
 set "TAG_MESSAGE=Primera version estable"
 set "BRANCH_MAIN=main"

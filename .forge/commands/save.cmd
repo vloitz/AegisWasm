@@ -23,16 +23,16 @@ if not exist ".git" (
 git add -A >nul 2>nul
 git diff --cached --quiet
 if not errorlevel 1 (
-    echo   !C_GY!Sin cambios para SAVE.!C_RS!
+    echo   !C_GY!Sin cambios para guardar.!C_RS!
     exit /b 0
 )
 
 echo.
 echo   !C_CY!------------------------------------------------------------!C_RS!
-echo   !C_BC! SAVE!C_RS! !C_GY!- Commit local!C_RS!
+echo   !C_BC! GUARDAR!C_RS! !C_GY!- Commit local!C_RS!
 echo   !C_CY!------------------------------------------------------------!C_RS!
 echo.
-echo   !C_GY!Archivos a SAVE:!C_RS!
+echo   !C_GY!Archivos a guardar:!C_RS!
 git diff --cached --name-only | findstr /n "^"
 echo.
 echo   !C_GY!Evita usar: " # : + / , en el mensaje!C_RS!
