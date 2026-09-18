@@ -1,0 +1,46 @@
+{
+    "_comment": "Contrato Maestro de AegisWasm — Template canónico para Vloitz. Proyecto de referencia: streaming HLS + WebGL + PWA sin bundler. Uso: copiar este archivo a la raíz del proyecto destino con el nombre 'aegis.config.json' antes de correr 'node compiler/aegis_build.js'.",
+    "_regla_de_oro": "NO regenerar este archivo con aegis_init.js. Este es un contrato CURADO a mano para el caso específico de Vloitz. aegis_init.js genera un borrador preliminar que debe editarse hasta llegar a esta forma.",
+    "source_dir": "./encript",
+    "encrypt": [
+        "body-particles.js",
+        "calibradores.js",
+        "portada_visual.js",
+        "app.js",
+        "story.js"
+    ],
+    "exclude": [
+        "sw.js"
+    ],
+    "workers": [
+        "story-worker.js"
+    ],
+    "options": {
+        "xor_key": 90,
+        "out_dir": "./"
+    },
+    "routing": [
+        {
+            "id": "r2-audio-segments",
+            "match_hostname": "r2.dev",
+            "match_path": "\\.m4s$",
+            "transform": "/v-enc/",
+            "crypto": {
+                "algorithm": "xor-multibyte",
+                "key_utf8": "vloitz_key_2026",
+                "bytes_to_decrypt": 100
+            }
+        },
+        {
+            "id": "hf-audio-segments",
+            "match_hostname": "workers.dev",
+            "match_path": "\\.m4s$",
+            "transform": "/v-enc/",
+            "crypto": {
+                "algorithm": "xor-multibyte",
+                "key_utf8": "vloitz_key_2026",
+                "bytes_to_decrypt": 100
+            }
+        }
+    ]
+}
